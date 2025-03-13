@@ -22,6 +22,7 @@
 - **Output**: 
     - A graph showing the hydrophobicity profile of the protein sequence.
     - A text file (`hydrophobic_positions.txt`) containing the positions of hydrophobic amino acids.
+    - A PDF file (`hydrophobic_profile.pdf`) containing the graph of hydrophobic profile of the protein.
 
 ## **Requirements:**
 - Python 3.x
