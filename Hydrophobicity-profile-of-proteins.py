@@ -96,6 +96,7 @@ def plot_hydrophobicity():
     plt.ylabel("Hydrophobicity score")
     plt.tight_layout()
     plt.legend()
+    plt.savefig(f"hydrophobic_profile.pdf")
     plt.show()
 
 def save_positions_to_file(filename="hydrophobic_positions.txt"):
