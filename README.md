@@ -1,28 +1,31 @@
 # Hydrophobicity Profile of Proteins
- This project computes the hydrophobicity profile of a given protein sequence using multiple well-known scales: Kyte-Doolittle, Hopp-Woods, Cornette, Eisenberg, Rose, Janin, and Engelman GES. The tool uses a sliding window approach to calculate the average hydrophobicity score and visualizes the hydrophobic and hydrophilic regions of the protein sequence. The user can choose the method and window size, then analyze and save the results.
+ This project computes the **hydrophobicity profile** of a protein sequence using multiple well-known scales: Kyte-Doolittle, Hopp-Woods, Cornette, Eisenberg, Rose, Janin, and Engelman GES. The tool uses a **sliding window** approach to calculate the average hydrophobicity score and visualizes the hydrophobic and hydrophilic regions. Users can choose the hydrophobicity method and window size, then save and analyze results.
 
- ## **Features:**
-- Fetch protein sequences directly from the UniProt database using the protein's UniProt ID.
-- Compute hydrophobicity scores for the sequence based on selected methods.
-- Display the hydrophobicity profile as a plot, highlighting hydrophobic (positive score) regions.
-- Save the positions of hydrophobic amino acids in a text file for further analysis.
+ ## **Features**
+- Fetch protein sequences directly from the **UniProt database** using UniProt IDs.
+- Compute hydrophobicity scores using selected scales.
+- Generate a plot highlighting **hydrophobic (positive score)** regions.
+- Save the positions of hydrophobic amino acids to a text file.
+- Save the hydrophobicity profile plot as an image (.png) and optionally as a PDF.
 
-## **How It Works:**
-1. **Fetch Protein Sequence**: The user inputs the UniProt ID of the protein of interest. The script then fetches the amino acid sequence from the UniProt database.
-2. **Select Hydrophobicity Method**: The user selects one of the popular hydrophobicity scales, including Kyte-Doolittle, Hopp-Woods, Cornette, Eisenberg, Rose, Janin, or Engelman GES.
-3. **Sliding Window Calculation**: The user specifies a window size (recommended size: 7 or 11). The script calculates the average hydrophobicity score within the selected window, then slides across the entire sequence.
-4. **Hydrophobicity Plot**: The hydrophobicity scores are plotted along the sequence. The plot visually represents the hydrophobic and hydrophilic regions.
-5. **Save Results**: The positions of hydrophobic amino acids (with a score greater than 0) are saved in a text file for further review.
+## **How It Works**
+1. **Fetch Protein Sequence**: Input a UniProt ID (e.g., `P11229`) and fetch the amino acid sequence from UniProt.
+2. **Select Hydrophobicity Method**: Choose one of the popular hydrophobicity scales (Kyte-Doolittle, Hopp-Woods, Cornette, Eisenberg, Rose, Janin, Engelman GES).
+3. **Sliding Window Calculation**: Specify a window size (recommended 7 or 11). The script computes the average hydrophobicity score for each window along the sequence.
+4. **Hydrophobicity Plot**: The computed scores are plotted along the sequence, showing hydrophobic and hydrophilic regions. A horizontal line indicates the threshold.
+5. **Save Results**: 
+- **Positions file**: Text file listing indices of hydrophobic amino acids (score > threshold).
+- **Plot file**: PNG (or PDF) file with the hydrophobicity profile.
 
-## **Example:**
+## **Example Usage**
 - **Input**: 
     - UniProt ID: `P11229`
     - Hydrophobicity scale: Kyte-Doolittle
     - Sliding window size: 9
 - **Output**: 
-    - A graph showing the hydrophobicity profile of the protein sequence.
-    - A text file (`hydrophobic_positions.txt`) containing the positions of hydrophobic amino acids.
-    - A PDF file (`hydrophobic_profile.pdf`) containing the graph of hydrophobic profile of the protein.
+    - `results/P11229_hydro_positions.txt`: positions of hydrophobic amino acids.
+    - `results/P11229_hydro_plot.png`: hydrophobicity profile plot.
+    - Optional: PDF version of the plot.
 
 ## **Requirements:**
 - Python 3.x
@@ -30,6 +33,7 @@
 - `numpy`
 - `matplotlib`
 - `biopython`
+- `requests`
 
 ## **Installation:**
 Clone the repository and install the necessary dependencies:
@@ -38,3 +42,13 @@ Clone the repository and install the necessary dependencies:
 git clone https://github.com/RemyKlein/hydrophobicity-profile-proteins.git
 cd hydrophobicity-profile-proteins
 pip install -r requirements.txt
+```
+
+## **Running the Script**
+```bash
+python hydrophobicity_profile.py P11229 --method Kyte-Doolittle --window 9 --threshold 0 --outdir results
+```
+- `--method`: Hydrophobicity scale (default: Kyte-Doolittle).
+- `--window`: Sliding window size (default: 11).
+- `--threshold`: Score threshold for hydrophobic positions (default: 0).
+- `--outdir`: Directory to save outputs (default: results).
