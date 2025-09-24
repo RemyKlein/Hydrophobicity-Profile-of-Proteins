@@ -40,7 +40,7 @@ Clone the repository and install the necessary dependencies:
 
 ```bash
 git clone https://github.com/RemyKlein/Hydrophobicity-Profile-of-Proteins.git
-cd hydrophobicity-profile-proteins
+cd Hydrophobicity-Profile-of-Proteins
 pip install -r requirements.txt
 ```
 
