@@ -46,7 +46,7 @@ pip install -r requirements.txt
 
 ## **Running the Script**
 ```bash
-python hydrophobicity_profile.py P11229 --method Kyte-Doolittle --window 9 --threshold 0 --outdir results
+python Hydrophobicity-profile-of-proteins.py P11229 --method Kyte-Doolittle --window 9 --threshold 0 --outdir results
 ```
 - `--method`: Hydrophobicity scale (default: Kyte-Doolittle).
 - `--window`: Sliding window size (default: 11).
