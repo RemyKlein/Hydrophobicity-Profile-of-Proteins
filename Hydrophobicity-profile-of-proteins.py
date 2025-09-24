@@ -1,7 +1,11 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from Bio import SeqIO, Entrez
+from Bio import SeqIO
+from io import StringIO
+import argparse
+import requests
+import os
 
 # DataFrame with hydrophobicity scale
 hydrophobicity_scale = pd.DataFrame({
@@ -13,7 +17,7 @@ hydrophobicity_scale = pd.DataFrame({
     "Janin": {"A": 0.3, "C": 0.9, "D": -0.6, "E": -0.7, "F": 0.5, "G": 0.3, "H": -0.1, "I": 0.7, "K": -1.8, "L": 0.5, "M": 0.4, "N": -0.5, "P": -0.3, "Q": -0.7, "R": -1.4, "S": -0.1, "T": -0.2, "V": 0.6, "W": 0.3, "Y": -0.4},
     "Engelman GES": {"A": 1.6, "C": 2.0, "D": -9.2, "E": -8.2, "F": 3.7, "G": 1.0, "H": -3.0, "I": 3.1, "K": -8.8, "L": 2.8, "M": 3.4, "N": -4.8, "P": -0.2, "Q": -4.1, "R": -12.3, "S": 0.6, "T": 1.2, "V": 2.6, "W": 1.9, "Y": -0.7}
 })
-# Name of the index (not mandatory)
+
 hydrophobicity_scale.index.name = "Amino acids"
 
 methods = {
@@ -26,36 +30,40 @@ methods = {
     7: "Engelman GES" 
 }
 
-def load_protein_sequence(id_uniprot):
+def fetch_uniprot_sequence(uniprot_id):
     """
-    This function takes the id of the protein from UniProt database and return the amino acids sequence.
+    Fetch the protein sequence from UniProt using its REST API.
 
     Parameters:
-    id_uniprot (str): ID of the protein from UniProt
+        uniprot_id (str): UniProt identifier of the protein.
 
     Returns:
-    str: The amino acids sequence
+        str: Amino acid sequence of the protein.
+
+    Raises:
+        ValueError: If the UniProt ID cannot be fetched.
     """
-    # Email to access database UniProt
-    Entrez.email = input("Enter your email to access the UniProt database: ")
-    with Entrez.efetch(db="protein", id=id_uniprot, rettype="fasta", retmode="text") as handle:
-        record = SeqIO.read(handle, "fasta")
-        return str(record.seq)
+    url = f"https://rest.uniprot.org/uniprotkb/{uniprot_id}.fasta"
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise ValueError(f"Could not fetch UniProt ID {uniprot_id}")
+    fast_io = StringIO(response.text) # Creation temporary folder to be read by SeqIO.
+    record = SeqIO.read(fast_io, "fasta") # Reading of FASTA protein file.
+    return str(record.seq)
 
 def compute_hydrophobicity(sequence, method, window_size):
     """
-    This function computes the hydrophobicity score for a protein sequence using a selected method and window size. 
-    It returns the hydrophobicity scores for each amino acid in the sequence, and the positions where amino acids 
-    are considered hydrophobic based on the chosen method.
+    Compute hydrophobicity scores for a protein sequence using a given scale and sliding window.
 
     Parameters:
-    sequence (str): The sequence of amino acids of the protein selected.
-    method (DataFrame): The hydrophobicity profile method chosen (e.g., Kyte-Doolittle, Hopp-Woods, etc.).
-    window_size (int): The size of the sliding window used to calculate the hydrophobicity score.
+        sequence (str): Amino acid sequence of the protein.
+        method (pd.Series): Hydrophobicity scale for each amino acid.
+        window_size (int): Size of the sliding window used to calculate the average score.
 
     Returns:
-    scores (list): A list containing the hydrophobicity score for each window of amino acids in the sequence.
-    scores_hydro (list): A list of positions where the hydrophobicity score exceeds the threshold (i.e., positive score).
+        tuple:
+            - scores (list of float): Hydrophobicity score for each window along the sequence.
+            - scores_hydro (list of int): Positions (indices) where the hydrophobicity score > 0.
     """
     scores = []
     scores_hydro = []
@@ -67,89 +75,78 @@ def compute_hydrophobicity(sequence, method, window_size):
             scores_hydro.append(i)
     return scores, scores_hydro
 
-def plot_hydrophobicity():
+def plot_hydrophobicity(sequence, method, window_size, threshold, output_file):
     """
-    This function generates and displays a plot of the hydrophobicity profile of a protein sequence. 
-    It uses the hydrophobicity scores calculated for the sequence, based on a selected method and 
-    window size. The plot visualizes the hydrophobicity scores along the sequence, marking the 
-    hydrophilic/hydrophobic threshold with a dashed line and highlighting the positions of amino 
-    acids with varying hydrophobicity.
+    Generate and save a hydrophobicity profile plot for a protein sequence.
 
     Parameters:
-    None (this function relies on external variables such as "sequence", "choice_hydrophobicity_scale", 
-    and "window_size_choice" for its operation).
+        sequence (str): Protein sequence.
+        method (pd.Series): Hydrophobicity scale for amino acids.
+        window_size (int): Sliding window size for averaging scores.
+        threshold (float): Hydrophobicity threshold to draw on the plot.
+        output_file (str): Path to save the plot image.
 
     Returns:
-    None (The function directly shows the plot).
-
-    Notes:
-    - The plot will display the hydrophobicity scores as a line graph with scatter points.
-    - The threshold for hydrophobicity (score > 0) is marked by a horizontal dashed line at y=0.
+        None. The plot is saved to the specified file.
     """
-    scores, _ = compute_hydrophobicity(sequence, choice_hydrophobicity_scale, window_size_choice) 
+    scores, _ = compute_hydrophobicity(sequence, method, window_size) 
     positions = range(len(scores))
     plt.plot(positions, scores, color="blue", label="Hydrophobicity")
-    plt.axhline(y=0, color="k", linestyle='--', label="Hydrophilic/Hydrophobic threshold")
+    plt.axhline(y=threshold, color="k", linestyle='--', label="Hydrophilic/Hydrophobic threshold")
     plt.scatter(positions, scores, color="blue", s=20, alpha=0.4)
     plt.title("Hydrophobicity profile", fontweight="bold")
     plt.xlabel("Position in sequence")
     plt.ylabel("Hydrophobicity score")
     plt.tight_layout()
     plt.legend()
-    plt.savefig(f"hydrophobic_profile.pdf")
+    plt.savefig(output_file)
     plt.show()
 
-def save_positions_to_file(filename="hydrophobic_positions.txt"):
+def save_positions_to_file(sequence, method, window_size, filename="hydrophobic_positions.txt"):
     """
-    This function saves the positions of hydrophobic amino acids in the protein sequence to a text file. 
-    The positions are determined based on the hydrophobicity profile calculated using a selected method 
-    and a specified window size. Only positions with a positive hydrophobicity score are saved.
+    Save positions of hydrophobic amino acids in a protein sequence to a text file.
 
     Parameters:
-    filename (str): The name of the file where the positions will be saved. Default is "hydrophobic_positions.txt".
+        sequence (str): Protein sequence.
+        method (pd.Series): Hydrophobicity scale for amino acids.
+        window_size (int): Sliding window size used to calculate scores.
+        filename (str): Output file path. Default is "hydrophobic_positions.txt".
 
     Returns:
-    None (The function writes the positions to the file and does not return any value).
-    
+        None. The file is written with positions where the hydrophobicity score > 0.
+
     Notes:
-    - Each position is written on a new line in the text file.
-    - The positions correspond to the indices in the protein sequence where the hydrophobicity score exceeds the threshold (positive score).
+        - Each position corresponds to the index of the first amino acid in the window 
+          whose average hydrophobicity score is positive.
     """
-    _, positions = compute_hydrophobicity(sequence, choice_hydrophobicity_scale, window_size_choice)
+    _, positions = compute_hydrophobicity(sequence, method, window_size)
     with open(filename, "w") as file:
         file.write("Positions of hydrophobic amino acids:\n")
         for pos in positions:
             file.write(f"{pos}\n")
 
-# Loading of protein ID
-id_uniprot = input("Enter the UniProt ID of your protein: ")
+def main():
+    parser = argparse.ArgumentParser(description="Compute protein hydrophobicity profiles from UniProt sequences.")
+    parser.add_argument("ids", nargs="+", help="UniProt protein IDs (e.g. P69905 P68871)")
+    parser.add_argument("--method", choices=hydrophobicity_scale.columns, default="Kyte-Doolittle", help="Hydrophobicity scale")
+    parser.add_argument("--window", type=int, default=11, help="Sliding window size")
+    parser.add_argument("--threshold", type=float, default=0.0, help="Hydrophobicity threshold")
+    parser.add_argument("--outdir", default="results", help="Output directory")
+    args = parser.parse_args()
 
-# Loading of sliding window size
-print("Select a size for the size of the sliding window (recommended size: 7 or 11)")
-while True:
-    try:
-        window_size_choice = int(input("Your window size choice: "))
-        if window_size_choice <= 0:
-            print("Error: The window size must be a positive integer greater than zero!")
-        else:
-            break
-    except ValueError:
-        print("Error: You must enter a valid number!")
+    os.makedirs(args.outdir, exist_ok=True)
 
-# Loading the method for the hydrophobicity profile
-print("Select a numeric value for the choice of method:\n1 - Kyte-Doolittle\n2 - Hopp-Woods\n3 - Cornette\n4 - Eisenberg\n5 - Rose\n6 - Janin\n7 - Engelman GES")
-while True:
-    try:
-        choice_user = int(input("Your choice (1 - 7): "))
-        if 1 <= choice_user <= 7:
-            break
-        else:
-            print("Error: The number must be between 1 and 7.")
-    except ValueError:
-        print("Error: You must enter a valid number!")
-choice_method = methods[choice_user]
-choice_hydrophobicity_scale = hydrophobicity_scale[choice_method]
+    for uid in args.ids:
+        print(f"Processing {uid}...")
+        seq = fetch_uniprot_sequence(uid)
+        scores, hydro_pos = compute_hydrophobicity(seq, hydrophobicity_scale[args.method], args.window)
 
-sequence = load_protein_sequence(id_uniprot)
-plot_hydrophobicity()
-save_positions_to_file()
+        # Utiliser la fonction pour sauvegarder les positions
+        pos_file = os.path.join(args.outdir, f"{uid}_hydro_positions.txt")
+        save_positions_to_file(seq, hydrophobicity_scale[args.method], args.window, filename=pos_file)
+        
+        plot_file = os.path.join(args.outdir, f"{uid}_hydro_plot.png")
+        plot_hydrophobicity(seq, hydrophobicity_scale[args.method], args.window, threshold=args.threshold, output_file=plot_file)
+
+if __name__ == "__main__":
+    main()
